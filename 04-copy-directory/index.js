@@ -1,25 +1,7 @@
 const path = require('path');
 const fs = require('fs/promises');
 
-/**
- * @param {string} folder
- */
-async function* enumerateDeepFiles(sourceFolder) {
-  const dirs = [sourceFolder];
-  while (dirs.length) {
-    const dir = dirs.shift();
-    const entries = await fs.readdir(dir, { withFileTypes: true });
-    for (const entry of entries) {
-      const fullPath = path.join(dir, entry.name);
-      if (entry.isFile()) {
-        yield fullPath;
-      }
-      if (entry.isDirectory()) {
-        dirs.push(fullPath);
-      }
-    }
-  }
-}
+const { flow, ls, filter, map } = require('../lib/streamutils');
 
 async function safeCopy(sourcePath, targetPath) {
   await fs.mkdir(path.dirname(targetPath), { recursive: true });
@@ -31,10 +13,16 @@ async function syncFolders(sourceDir, targetDir) {
 
   await fs.rm(targetDir, { recursive: true, force: true });
 
-  for await (const sourcePath of enumerateDeepFiles(sourceDir)) {
-    const relPath = path.relative(sourceDir, sourcePath);
+  const getFilenames = flow(
+    ls({ recursive: true }),
+    filter(({ dirent }) => dirent.isFile()),
+    map(({ filename }) => filename)
+  );
+
+  for await (const filename of getFilenames(sourceDir)) {
+    const relPath = path.relative(sourceDir, filename);
     const targetPath = path.join(targetDir, relPath);
-    promises.push(safeCopy(sourcePath, targetPath));
+    promises.push(safeCopy(filename, targetPath));
   }
 
   await Promise.all(promises);
@@ -46,7 +34,11 @@ async function main() {
   await syncFolders(sourceDir, targetDir);
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}
+
+exports.syncFolders = syncFolders;
