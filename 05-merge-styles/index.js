@@ -3,10 +3,7 @@ const path = require('path');
 
 const { pipeline, flow, ls, cat, filter, map } = require('../lib/streamutils');
 
-async function main() {
-  const sourceFolder = path.join(__dirname, 'styles');
-  const targetFile = path.join(__dirname, 'project-dist', 'bundle.css');
-
+async function bundleCss(sourceFolder, targetFile) {
   const transform = flow(
     ls({ recursive: true }),
     filter(({ dirent }) => dirent.isFile()),
@@ -18,10 +15,20 @@ async function main() {
   const bundle = transform(sourceFolder);
   const out = fs.createWriteStream(targetFile);
 
-  await pipeline(bundle, out);
+  return pipeline(bundle, out);
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+async function main() {
+  const sourceFolder = path.join(__dirname, 'styles');
+  const targetFile = path.join(__dirname, 'project-dist', 'bundle.css');
+  await bundleCss(sourceFolder, targetFile);
+}
+
+if (require.main === module) {
+  main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}
+
+exports.bundleCss = bundleCss;
