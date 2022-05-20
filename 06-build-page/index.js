@@ -4,7 +4,7 @@ const path = require('path');
 
 const { bundleCss } = require('../05-merge-styles');
 const { syncFolders } = require('../04-copy-directory');
-const { pipeline, cat, lines } = require('../lib/streamutils');
+const { pipeline, lines } = require('../lib/streamutils');
 
 const tagRe = /\{\{\s*(\w+)\s*\}\}/g;
 
@@ -18,7 +18,7 @@ async function* processTags(filename, includesDir) {
       if (segments[0]) {
         const componentName = segments.shift();
         const filename = path.join(includesDir, componentName) + '.html';
-        yield* cat([filename]);
+        yield* fs.createReadStream(filename);
       }
     }
     yield EOL;

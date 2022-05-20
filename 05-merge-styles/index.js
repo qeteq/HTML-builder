@@ -1,7 +1,16 @@
 const fs = require('fs');
 const path = require('path');
 
-const { pipeline, flow, ls, cat, filter, map } = require('../lib/streamutils');
+const {
+  pipeline,
+  flow,
+  ls,
+  append,
+  flatMap,
+  filter,
+  map,
+  id,
+} = require('../lib/streamutils');
 
 async function bundleCss(sourceFolder, targetFile) {
   const transform = flow(
@@ -9,7 +18,9 @@ async function bundleCss(sourceFolder, targetFile) {
     filter(({ dirent }) => dirent.isFile()),
     filter(({ filename }) => path.extname(filename) === '.css'),
     map((f) => f.filename),
-    cat
+    map(fs.createReadStream),
+    map(append(require('os').EOL)),
+    flatMap(id)
   );
 
   const bundle = transform(sourceFolder);
